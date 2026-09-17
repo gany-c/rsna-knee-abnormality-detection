@@ -122,6 +122,47 @@ In short:
                                                   actually looks like
   -----------------------------------------------------------------------
 
+### Standard anatomical planes
+
+A **standard plane** is a reference direction for taking slices through
+the body. Imagine looking at the knee from the front, from the side, or
+across the leg.
+
+| Plane | Simple way to picture it | Divides the body into |
+|---|---|---|
+| **Coronal** | A view from the front | Front and back portions |
+| **Sagittal** | A view from the side | Left and right portions |
+| **Axial** | A cross-section across the leg, like cutting a loaf into slices | Upper and lower portions |
+
+Actual MRI series can be **tilted** relative to these reference directions.
+This is called an **oblique acquisition** and may help show a particular
+structure. A tilted series is not automatically incorrect or unusable.
+
+**Closest standard plane** means the reference plane most closely aligned
+with the acquisition orientation recorded in the DICOM metadata. It is
+not determined by how the image is rotated on the screen.
+
+### What the preprocessing angle check means
+
+The notebook compares the plane named in `train_series.csv` with the
+orientation recorded inside the DICOM images. Think of a photo labeled
+“front view” whose camera was actually positioned at an angle.
+
+- **0° difference:** aligned with the named plane.
+- **90° difference:** perpendicular to the named plane.
+- **More than 35°:** exceeds the notebook's current configured cutoff.
+
+The **35° cutoff is our preprocessing choice**, not a universal rule about
+whether an MRI is valid. Exceeding it can reflect a strongly tilted
+acquisition or inconsistent plane metadata; the angle alone does not
+establish which explanation is correct.
+
+When this check fails, the code records an error and skips that series.
+Under the current complete-study requirement, its study is also excluded
+from the training-ready manifest. **The source images are not deleted.**
+The failed-series diagnostic cells display original slices and print the
+measured angle, cutoff, and closest standard plane in red for review.
+
 ------------------------------------------------------------------------
 
 ## 5. Efficiency Score
