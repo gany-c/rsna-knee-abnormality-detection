@@ -26,6 +26,7 @@ Personal learning checklist, organized from the original concept list. The descr
 - **Mask-Normalized Filtering:** Dividing a smoothed image signal by a smoothed validity mask (np.divide with explicit masks and denominators) to prevent edge distortion and incorrect weighting near boundary regions.
 - **Affine Image Resampling (affine_transform):** Using geometric transformation matrices and interpolation (e.g., bilinear/order=1) to map pixel arrays onto standardized target grids.
 - **Support Mask Thresholding:** Binarizing interpolated floating-point masks (e.g., > 0.999) to create strict, reliable regions of anatomical validity after resampling.
+- <span style="color: orange;"><strong>Principal Axis Orientation Normalization:</strong> Using vector dot products against canonical anatomical reference axes to enforce a consistent spatial depth direction.</span>
 
 ## 3. Python Standard Library & File System Concepts
 
@@ -54,7 +55,6 @@ Personal learning checklist, organized from the original concept list. The descr
 - **Background Pixel Padding Masking (PixelPaddingValue & PixelPaddingRangeLimit):** Standard tags defining background air or scanner borders to exclude non-tissue pixels.
 - **Modality Look-Up Table Calibration (apply_modality_lut):** Standardized transformation using rescale slope/intercept metadata to convert raw integers into physical units.
 - **Photometric Interpretation Handling (MONOCHROME1 vs MONOCHROME2):** Correcting luminance conventions where raw DICOM standards invert pixel intensities (e.g., white representing air instead of bone) to ensure consistent training signals.
-- **Principal Axis Orientation Normalization:** Using vector dot products against canonical anatomical reference axes to enforce a consistent spatial depth direction.
 - **DICOM Provenance & SOP Tracking:** Extracting unique instance identifiers (SOPInstanceUID) and transfer syntaxes for rigorous medical data traceability.
 
 ## 6. Architectural & Pipeline Design Patterns
