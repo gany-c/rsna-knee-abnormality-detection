@@ -1,6 +1,6 @@
 # Knee MRI inference and submission notebook specification
 
-Status: proposed implementation. Companion: `../training/training-algorithm.md`.
+Status: implemented in `submit-knee-dinov2-attention.ipynb`; synthetic end-to-end validation passed, real Kaggle validation pending. Companion: `../training/dinov2/training-algorithm.md`.
 
 ## 1. Purpose
 
@@ -9,6 +9,8 @@ Load the exported model package, prepare unseen studies using the training image
 The notebook must work with the actual Kaggle offline assets and runtime limits. Verify current competition rules, inputs, output schema, permitted weights and runtime before implementation; historical notebook runtimes do not establish hidden-test feasibility.
 
 ## 2. Required inputs
+
+Attach the custom Kaggle Model `gany24558/gc-rsna-knee-dinov2/pyTorch/five-fold-attention` at a selected version. It contains the shared encoder, all five heads and exact preprocessing/runtime code. The submission notebook reads its mounted files offline; it does not require the original Meta model or training caches.
 
 - Test-study table and official sample submission.
 - Test series metadata and DICOM files, or compatible normalized caches where explicitly available.
@@ -70,15 +72,9 @@ Do not use report information, test labels, public leaderboard feedback, or batc
 
 ## 7. Missing data and failures
 
-Record per-study status and reasons for unreadable files, malformed geometry, absent metadata, invalid series and failed predictions.
+Recoverable series-level DICOM/geometry failures are recorded and excluded; available valid series are retained. Missing series metadata for a study is allowed, and no all-masked attention is executed. If no usable series remains, the configured twelve fallback scores (0.5 each by default) are emitted and the study is counted explicitly. These emergency scores are not calibrated probabilities or training-derived priors. Partial-study prediction accuracy remains unvalidated on real competition data.
 
-- Missing metadata: use the trained unknown-category handling.
-- Structurally absent series: use series masks, as trained.
-- Failed expected series: apply the exported study-eligibility policy. If training required complete studies, partial-study inference is not automatically equivalent; reject or use a separately validated policy.
-- No usable series: do not execute all-masked attention.
-- Nonfinite prediction: flag and fail the model path; do not silently replace it with an arbitrary constant.
-
-If submission requires every study, explicitly configure a fallback policy before deployment. A possible fallback is a per-target training-derived prior stored in the artifact, but it needs known-label handling and a defined estimate for targets without support. Log every use. Otherwise stop with a clear error. No fallback should be chosen using test outcomes.
+Model integrity, dependency, encoder/head and nonfinite prediction failures remain fatal. Missing codec errors must be fixed with offline dependencies, not hidden by fallback. Diagnostics count skipped series, partial studies and fallback studies. `audit-knee-training-scans.ipynb` uses the exported preprocessing to evaluate real training scans on Kaggle before resubmission. The actual hidden-run exception is unknown.
 
 ## 8. Runtime and reproducibility
 

@@ -20,8 +20,10 @@ The package supplies the exact preprocessing/runtime source, shared frozen encod
 five head checkpoints and fold-specific spacing scalers. All manifest hashes and
 the exported synthetic head reference are checked before prediction. Image features
 are rounded through float16, then aggregated in float32 exactly as in training.
-The five sigmoid outputs are averaged equally. Decoding or geometry errors stop
-the run; no unvalidated constant prediction fallback or series dropping is used.
+The five sigmoid outputs are averaged equally. Recoverable series decoding/geometry errors are logged and excluded. Remaining
+series are used; if none remain, twelve explicit 0.5 emergency scores preserve
+coverage. These are not calibrated estimates. Missing decoder dependencies and
+model errors remain fatal. Partial-study accuracy is not yet established.
 
 Local validation: every notebook cell executed against synthetic DICOM studies,
 a real randomly initialized DINOv2 architecture and five random heads. Checked
@@ -37,5 +39,23 @@ If Kaggle reports a missing decoder, attach offline wheels for that dependency;
 do not enable Internet in the submission run.
 
 Development files: `inference_runtime.py` is embedded in the notebook by
-`build_notebook.py`. The synthetic integration test and its development fixtures
-remain in the local workspace under `inference_build/test_submission.py`.
+`build_notebook.py`; `test_submission.py` is the local synthetic integration test
+and uses the project's training runtime and synthetic preprocessing fixtures.
+
+## Hidden-run failure investigation
+
+Kaggle returned only `Notebook Threw Exception`; the root cause remains unknown.
+The revised notebook handles corrupt DICOMs, irregular geometry and missing series,
+and reports skipped series, partial studies and fallback studies in its receipt.
+No test labels or leaderboard probes are used. No competition resubmission was made.
+
+Run `audit-knee-training-scans.ipynb` on Kaggle with the competition data and custom
+model attached. It checks 250 deterministically sampled training series across planes
+by default; set MAX_SERIES=0 for all training series. It produces
+`training_scan_audit.csv` and `training_scan_summary.json`. Review failures before
+resubmitting. It does not assess predictive accuracy of partial studies.
+
+Only synthetic knee DICOMs were available locally. Fault injection covers missing
+series, malformed DICOMs, missing study metadata and irregular slice spacing;
+healthy predictions are checked against the original training aggregation.
+Real competition coverage, codec availability and hidden-test runtime remain unverified.
