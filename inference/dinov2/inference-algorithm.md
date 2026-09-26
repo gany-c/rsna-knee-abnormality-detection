@@ -1,6 +1,6 @@
 # Knee MRI inference and submission notebook specification
 
-Status: implemented in `submit-knee-dinov2-attention.ipynb`; synthetic end-to-end validation passed, real Kaggle validation pending. Companion: `../training/dinov2/training-algorithm.md`.
+Status: implemented in `submit-knee-dinov2-attention.ipynb`; synthetic end-to-end validation passed, real Kaggle validation pending. Companion: `../../training/dinov2/training-algorithm.md`.
 
 ## 1. Purpose
 
