@@ -41,10 +41,11 @@ A self-contained **training** notebook for Kaggle. It reads our normalized MRI d
 
 ## Attach these inputs
 
-1. **`gany24558/rsna-knee-normalized-training-data`**, latest complete version. All active shards must be processed. Existing labels/masks/weights/folds are inside these archives; no separate Qwen dataset is needed.
+1. **`gany24558/rsna-knee-normalized-training-data`**, latest complete version. All active shards must be processed. Existing folds, groups and official labels are retained from these archives. Generated targets are replaced by the community parquet below.
 2. The competition dataset, for `train.csv` verification. Training images come from the normalized dataset, not the original DICOMs.
 3. A **generic public DINOv2 Small, without registers** checkpoint. Supported: a Hugging Face `facebook/dinov2-small` directory with `config.json` and local weights, or Meta's official `dinov2_vits14_pretrain.pth` from an attached Kaggle model/dataset. No task-fine-tuned fold encoder. An arbitrary `.pth` architecture is not interchangeable.
-4. Optional: previous **private** notebook outputs for feature/checkpoint resumption.
+4. **rsna-knee-hpo-assets**, containing `labels_v1_blend.parquet`. Its schema and provenance must be checked; public availability alone is not evidence of label accuracy.
+5. Optional: previous **private** notebook outputs for feature/checkpoint resumption.
 
 Select a GPU (one T4/P100 is sufficient for the design; runtime must be measured), leave **Internet off**, and use **Save Version → Run All**. Kaggle usually provides the required packages. There are no online `pip install`, model download, API credential or upload calls. If a package is missing, attach an offline wheel dataset or select a compatible Kaggle image.
 
@@ -63,6 +64,10 @@ ENCODER_PATH = None      # HF folder OR path to dinov2_vits14_pretrain.pth; auto
 ENCODER_BACKEND = 'auto' # 'auto', 'hf', or 'timm'
 RESUME_ROOTS = []        # Previous run folders containing run_identity.json; otherwise discovered in /kaggle/input
 OUTPUT_ROOT = Path('/kaggle/working/rsna-knee-training')
+COMMUNITY_LABELS_PATH = Path('/kaggle/input/rsna-knee-hpo-assets/labels_v1_blend.parquet')
+COMMUNITY_COLUMN_MAP = None # If names differ: {our_target: parquet_column} for all 12 targets
+COMMUNITY_EPSILON = 0.05 # Smooth community targets ONCE; official labels remain 0/1
+COMMUNITY_WEIGHT = 0.25 # Retain the existing weak-label reliability weight
 MODE = 'all'            # 'all', 'features', 'train'
 FOLDS = [0, 1, 2, 3, 4] # For a pilot, use [0]; export is then clearly marked partial OOF
 MAX_HOURS = 7.5
@@ -96,6 +101,7 @@ for j,(title,name) in enumerate(boundaries):
   first=min([n.lineno]+[d.lineno for d in getattr(n,'decorator_list',[])])
   snippets.append(''.join(lines[first-1:n.end_lineno]))
  code('\n\n'.join(snippets))
+md('Community probabilities remain floats. Smoothing is applied once as `p * 0.9 + 0.05`, only to community targets. Missing targets are masked; official labels remain binary. Loss uses `nn.BCEWithLogitsLoss(reduction=\'none\')` to retain per-target masking and reliability weights. Validation remains against official labels. Confirm the community labels were extracted independently per report, without using held-out official labels for fitting or blending.')
 md('## 3. Preflight and dataset audit\nAll active shards are required; legacy and partial shards are rejected. The original verified labels are cross-checked against `train.csv`. Patient-group separation is enforced where provided; a study-ID fallback is reported honestly.')
 code('''import inspect, importlib.metadata, platform
 if MODE not in {'all','features','train'}: raise ValueError('Invalid MODE')
@@ -129,6 +135,11 @@ for target in TARGETS:
         raise ValueError('Verified-label mask drift: '+target)
     if not np.array_equal(original[target].to_numpy()[gold], ALL_LABELS[target].to_numpy()[gold]):
         raise ValueError('Verified-label value drift: '+target)
+# Replace only generated supervision, after verifying official labels.
+ALL_LABELS, LABEL_PROVENANCE = apply_community_labels(
+    ALL_LABELS, COMMUNITY_LABELS_PATH, COMMUNITY_EPSILON, COMMUNITY_WEIGHT, COMMUNITY_COLUMN_MAP)
+LABELS = ALL_LABELS.loc[ALL_LABELS[ID].isin(SERIES[ID])].copy().sort_values(ID).reset_index(drop=True)
+print('Community label provenance:', LABEL_PROVENANCE)
 available_folds = sorted(LABELS.loc[LABELS.has_gold.eq(1),'fold'].unique().tolist())
 if not set(FOLDS).issubset(available_folds): raise ValueError(f'Eligible verified folds are {available_folds}')
 print('Device:', DEVICE)
@@ -165,12 +176,13 @@ FEATURE_IDENTITY = dict(runtime=RUNTIME_VERSION, encoder_sha256=ENCODER_HASH, ba
     encoder_library=importlib.metadata.version('transformers' if BACKEND=='hf' else 'timm'),
     code_sha256=hashlib.sha256((''.join(definition_source(name) for name in
         ['read_native','FrozenEncoder','make_slice_inputs','protocol_codes','extract_features'])).encode()).hexdigest())
-TRAINING_ID = fingerprint(dict(cfg=CFG, feature=FEATURE_IDENTITY,
+TRAINING_ID = fingerprint(dict(cfg=CFG, feature=FEATURE_IDENTITY, labels=LABEL_PROVENANCE,
     runtime_sha256=hashlib.sha256(RUNTIME_SOURCE.encode()).hexdigest()))
 WORK = OUTPUT_ROOT/TRAINING_ID[:16]
 WORK.mkdir(parents=True, exist_ok=True)
 atomic_json(WORK/'run_identity.json', dict(training_id=TRAINING_ID, feature_id=fingerprint(FEATURE_IDENTITY)))
 atomic_json(WORK/'configuration.json', CFG)
+atomic_json(WORK/'community_label_provenance.json', LABEL_PROVENANCE)
 atomic_json(WORK/'preprocessing_identity.json', INDEX)
 audit_labels(LABELS).to_csv(WORK/'label_audit_private.csv', index=False)
 if not RESUME_ROOTS:
