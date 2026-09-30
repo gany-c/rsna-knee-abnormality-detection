@@ -70,7 +70,7 @@ def find_input_files(root, filename):
             yield Path(current)/filename
 
 
-def discover_bundle(explicit=None, input_root='/kaggle/input'):
+def discover_bundle(explicit=None, input_root='/kaggle/input', dataset_handle='gany24558/rsna-knee-normalized-all-training-data'):
     if explicit:
         root = Path(explicit)
     else:
@@ -78,12 +78,15 @@ def discover_bundle(explicit=None, input_root='/kaggle/input'):
         for p in find_input_files(input_root,'dataset_index.json'):
             try:
                 index = json.loads(p.read_text())
-                if index.get('dataset_handle') == 'gany24558/rsna-knee-normalized-training-data':
+                if index.get('dataset_handle') == dataset_handle:
                     candidates.append(p.parent)
             except (ValueError, OSError): pass
         root = select_one(candidates, 'DATASET_ROOT')
     if not (root / 'dataset_index.json').is_file():
-        raise FileNotFoundError('Attach gany24558/rsna-knee-normalized-training-data, with dataset_index.json')
+        raise FileNotFoundError(f'Attach {dataset_handle}, with dataset_index.json')
+    index = json.loads((root / 'dataset_index.json').read_text())
+    if index.get('dataset_handle') != dataset_handle:
+        raise ValueError(f'Expected dataset {dataset_handle}; found {index.get("dataset_handle")}')
     return root
 
 

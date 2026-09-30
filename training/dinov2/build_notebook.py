@@ -41,7 +41,7 @@ A self-contained **training** notebook for Kaggle. It reads our normalized MRI d
 
 ## Attach these inputs
 
-1. **`gany24558/rsna-knee-normalized-training-data`**, latest complete version. All active shards must be processed. Existing folds, groups and official labels are retained from these archives. Generated targets are replaced by the community parquet below.
+1. **`gany24558/rsna-knee-normalized-all-training-data`**, latest complete version. All active shards must be processed. Existing folds, groups and official labels are retained from these archives. Generated targets are replaced by the community parquet below.
 2. The competition dataset, for `train.csv` verification. Training images come from the normalized dataset, not the original DICOMs.
 3. A **generic public DINOv2 Small, without registers** checkpoint. Supported: a Hugging Face `facebook/dinov2-small` directory with `config.json` and local weights, or Meta's official `dinov2_vits14_pretrain.pth` from an attached Kaggle model/dataset. No task-fine-tuned fold encoder. An arbitrary `.pth` architecture is not interchangeable.
 4. **rsna-knee-hpo-assets**, containing `labels_v1_blend.parquet`. Its schema and provenance must be checked; public availability alone is not evidence of label accuracy.
@@ -58,13 +58,14 @@ Competition data redistribution is restricted. Keep this notebook and its comple
 This is an implementable baseline, not a reproduced leaderboard score. The small verified set has already informed label development, so cross-validation is development evidence rather than an untouched final evaluation.''')
 md('## 1. Configuration\nThe default runs feature extraction followed by all five folds. Use `features` or `train` to separate sessions. Hyperparameter changes create a separate training run; compatible frozen feature caches can still be reused.')
 code('''from pathlib import Path
-DATASET_ROOT = None      # Example: Path('/kaggle/input/datasets/gany24558/rsna-knee-normalized-training-data')
+DATASET_HANDLE = 'gany24558/rsna-knee-normalized-all-training-data'
+DATASET_ROOT = None      # Example: Path('/kaggle/input/datasets/gany24558/rsna-knee-normalized-all-training-data')
 COMPETITION_ROOT = None  # Directory containing the original train.csv and train_series.csv
 ENCODER_PATH = None      # HF folder OR path to dinov2_vits14_pretrain.pth; auto-discovery fails on ambiguity
 ENCODER_BACKEND = 'auto' # 'auto', 'hf', or 'timm'
 RESUME_ROOTS = []        # Previous run folders containing run_identity.json; otherwise discovered in /kaggle/input
 OUTPUT_ROOT = Path('/kaggle/working/rsna-knee-training')
-COMMUNITY_LABELS_PATH = Path('/kaggle/input/rsna-knee-hpo-assets/labels_v1_blend.parquet')
+COMMUNITY_LABELS_PATH = None # Auto-discover labels_v1_blend.parquet; explicit Path also supported
 COMMUNITY_COLUMN_MAP = None # If names differ: {our_target: parquet_column} for all 12 targets
 COMMUNITY_EPSILON = 0.05 # Smooth community targets ONCE; official labels remain 0/1
 COMMUNITY_WEIGHT = 0.25 # Retain the existing weak-label reliability weight
@@ -116,7 +117,8 @@ if REQUIRE_GPU and not torch.cuda.is_available(): raise RuntimeError('Enable a K
 DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 BUDGET = SessionBudget(MAX_HOURS)
 seed_all(CFG['seed'])
-ROOT = discover_bundle(DATASET_ROOT)
+ROOT = discover_bundle(DATASET_ROOT, dataset_handle=DATASET_HANDLE)
+print('Normalized image dataset:', ROOT)
 SERIES, LABELS, ALL_LABELS, INDEX = load_bundle(ROOT)
 EXPECTED_PREPROCESSING_IMPLEMENTATION = 'ef1a2effbba938df32d512f010e3786904efc0cda3d04c95b074e29265018b5d'
 if INDEX['preprocessing'].get('implementation') != EXPECTED_PREPROCESSING_IMPLEMENTATION:
@@ -135,6 +137,9 @@ for target in TARGETS:
         raise ValueError('Verified-label mask drift: '+target)
     if not np.array_equal(original[target].to_numpy()[gold], ALL_LABELS[target].to_numpy()[gold]):
         raise ValueError('Verified-label value drift: '+target)
+# Resolve the actual Kaggle mount path rather than assuming an owner-free path.
+if COMMUNITY_LABELS_PATH is None:
+    COMMUNITY_LABELS_PATH = select_one(list(find_input_files('/kaggle/input', 'labels_v1_blend.parquet')), 'COMMUNITY_LABELS_PATH')
 # Replace only generated supervision, after verifying official labels.
 ALL_LABELS, LABEL_PROVENANCE = apply_community_labels(
     ALL_LABELS, COMMUNITY_LABELS_PATH, COMMUNITY_EPSILON, COMMUNITY_WEIGHT, COMMUNITY_COLUMN_MAP)
@@ -142,6 +147,8 @@ LABELS = ALL_LABELS.loc[ALL_LABELS[ID].isin(SERIES[ID])].copy().sort_values(ID).
 print('Community label provenance:', LABEL_PROVENANCE)
 available_folds = sorted(LABELS.loc[LABELS.has_gold.eq(1),'fold'].unique().tolist())
 if not set(FOLDS).issubset(available_folds): raise ValueError(f'Eligible verified folds are {available_folds}')
+print('Dataset shards:', len(INDEX['shards']), '/', INDEX['identity']['num_shards'])
+print('Missing-image studies:', len(set(ALL_LABELS[ID]) - set(SERIES[ID])))
 print('Device:', DEVICE)
 print('Usable studies:', len(LABELS), '| series:', len(SERIES), '| excluded studies:', len(ALL_LABELS)-len(LABELS))
 print('Grouping:', 'STUDY ONLY — no patient-separation guarantee' if
@@ -288,6 +295,6 @@ n=nb.v4.new_notebook(cells=cells,metadata=dict(kernelspec=dict(display_name='Pyt
 nb.validate(n)
 for i,c in enumerate(n.cells):
  if c.cell_type=='code':compile(c.source,f'cell_{i}','exec')
-p=BASE/'train-knee-dinov2-attention.ipynb';nb.write(n,p)
+p=BASE/'train-knee-dinov2-all-studies.ipynb';nb.write(n,p)
 (BASE/'native_preprocessing.py').write_text(prep_runtime)
 print(p, len(n.cells),'cells')
