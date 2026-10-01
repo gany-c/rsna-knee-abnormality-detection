@@ -52,9 +52,3 @@ Switching to community labels, with the accompanying smoothing, improved DINOv2'
 
 **Stage 2 DINOv2 remains our best recorded result: 0.756.**
 
-## Evidence and interpretation
-
-- Public scores and submission versions come from the Kaggle submission results shared in this conversation.
-- The all-studies training notebook's saved execution timestamps confirm September 30, 2026; its output confirms 13/13 shards, 4,407 studies, 24,371 series and complete out-of-fold coverage.
-- Earlier exact submission timestamps were not available locally. Approximate dates should be replaced if the Kaggle submission timestamps are retrieved.
-- OOF means out-of-fold: each official-label validation study is predicted using its held-out fold model. These validation results cover 58 officially labelled studies and are development evidence, not the public leaderboard score.
