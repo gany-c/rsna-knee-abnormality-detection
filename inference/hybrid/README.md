@@ -6,7 +6,7 @@ Attach:
 
 1. RSNA Knee Abnormality Detection competition data.
 2. `gany24558/gc-rsna-knee-resnet34/pyTorch/study-mil` — the version used for the successful ResNet submission.
-3. `gany24558/gc-rsna-knee-dinov2/pyTorch/five-fold-attention` — the version used for the successful DINOv2 submission.
+3. `gany24558/rsna-knee-dinov2/pyTorch/community-dataset` — the version used for the successful DINOv2 submission.
 4. `gany24558/rsna-dicom-decoders` with the Python 3.12 Linux GDCM wheel.
 
 Enable GPU, disable Internet, start a fresh session, and Run All. The notebook defaults to:
@@ -56,3 +56,7 @@ Local tests cover row/column reordering, exact coverage, duplicate/missing IDs, 
 ## Terms
 
 **Ensemble:** combines predictions from multiple models. **Weight:** a model's fraction of the final probability. **Inference:** applying trained weights to new images. **Attention head:** the DINOv2 model's trained aggregation/classification component. **Fallback:** an emergency probability when usable scans are absent. **Manifest:** machine-readable model/run details. **Sequential:** one model runs after the other; this saves memory but not total compute.
+
+## October 4, 2026: model paths from the downloaded notebook
+
+The configuration explicitly pins ResNet `study-mil/2` and DINOv2 `community-dataset/1`, following the corrected user selection of the 0.756 model. The blend remains 80% ResNet and 20% DINOv2. DINOv2 model version 2 is the 4,407-study run (public 0.748); model version 1 is the 3,917-study run (public 0.756). Attach both pinned versions on Kaggle. Model versions are separate from submission version numbers.

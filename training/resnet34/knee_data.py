@@ -57,7 +57,7 @@ def find_input_files(root, filename):
             yield Path(current)/filename
 
 
-def discover_bundle(explicit=None, input_root='/kaggle/input'):
+def discover_bundle(explicit=None, input_root='/kaggle/input', dataset_handle='gany24558/rsna-knee-normalized-all-training-data'):
     if explicit:
         root = Path(explicit)
     else:
@@ -65,12 +65,15 @@ def discover_bundle(explicit=None, input_root='/kaggle/input'):
         for p in find_input_files(input_root,'dataset_index.json'):
             try:
                 index = json.loads(p.read_text())
-                if index.get('dataset_handle') == 'gany24558/rsna-knee-normalized-training-data':
+                if index.get('dataset_handle') == dataset_handle:
                     candidates.append(p.parent)
             except (ValueError, OSError): pass
         root = select_one(candidates, 'DATASET_ROOT')
     if not (root / 'dataset_index.json').is_file():
-        raise FileNotFoundError('Attach gany24558/rsna-knee-normalized-training-data, with dataset_index.json')
+        raise FileNotFoundError(f'Attach {dataset_handle}, with dataset_index.json')
+    index = json.loads((root / 'dataset_index.json').read_text())
+    if index.get('dataset_handle') != dataset_handle:
+        raise ValueError(f'Expected dataset {dataset_handle}; found {index.get("dataset_handle")}')
     return root
 
 
@@ -144,11 +147,71 @@ def validate_labels(labels):
         m = labels[t+'__mask'].eq(1); g = labels[t+'__gold'].eq(1)
         w = labels[t+'__weight'].to_numpy(float)
         if not np.isfinite(w).all() or (w < 0).any(): raise ValueError('Invalid reliability weights')
-        if not labels.loc[m, t].isin([0, 1]).all(): raise ValueError('Known target is not binary')
+        values = labels.loc[m, t].to_numpy(float)
+        if not np.isfinite(values).all() or ((values < 0) | (values > 1)).any():
+            raise ValueError('Known target must be a finite probability in [0, 1]')
+        if not labels.loc[g, t].isin([0, 1]).all(): raise ValueError('Official target must be binary')
         if (g & ~m).any() or (g & labels[t+'__weight'].ne(1)).any(): raise ValueError('Invalid verified override')
     any_gold = labels[[t+'__gold' for t in TARGETS]].any(axis=1)
     if not labels.has_gold.eq(any_gold.astype(int)).all(): raise ValueError('has_gold does not match per-target masks')
     if labels.loc[any_gold, 'fold'].lt(0).any(): raise ValueError('Verified studies need validation folds')
+
+
+def smooth_soft_targets(target, epsilon=0.05):
+    """Smooth probabilities once; missing values remain missing (not negatives)."""
+    if not 0 <= epsilon < 0.5:
+        raise ValueError('epsilon must be in [0, 0.5)')
+    return target * (1 - 2 * epsilon) + epsilon
+
+
+def apply_community_labels(labels, path, epsilon=0.05, weight=0.25, column_map=None):
+    """Replace generated labels only. Keep official labels, folds and groups unchanged.
+
+    column_map maps our target names to parquet column names. No positional guesses.
+    """
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f'Attach rsna-knee-hpo-assets and set COMMUNITY_LABELS_PATH: {path}')
+    if not np.isfinite(weight) or weight <= 0:
+        raise ValueError('Community label weight must be positive and finite')
+    frame = pd.read_parquet(path)
+    if ID not in frame and frame.index.name == ID:
+        frame = frame.reset_index()
+    mapping = column_map or {t: t for t in TARGETS}
+    if set(mapping) != set(TARGETS) or len(set(mapping.values())) != len(TARGETS):
+        raise ValueError('Provide one distinct community column per target')
+    missing = {ID, *mapping.values()} - set(frame.columns)
+    if missing:
+        raise ValueError(f'Missing parquet columns {sorted(missing)}; available: {list(frame.columns)}. Set COMMUNITY_COLUMN_MAP explicitly.')
+    if frame[ID].isna().any(): raise ValueError('Missing community study ID')
+    frame[ID] = frame[ID].astype(str)
+    if frame[ID].duplicated().any(): raise ValueError('Duplicate community study IDs')
+    extra = set(frame[ID]) - set(labels[ID])
+    if extra: raise ValueError(f'Community labels include {len(extra)} IDs outside official training data')
+    if not len(frame): raise ValueError('Empty community label table')
+    frame = frame.set_index(ID)
+    out = labels.copy()
+    for t in TARGETS:
+        values = pd.to_numeric(frame[mapping[t]], errors='raise').astype(float)
+        present = values.notna()
+        if not np.isfinite(values[present]).all() or not values[present].between(0, 1).all():
+            raise ValueError(f'Invalid community probabilities: {t}')
+        aligned = values.reindex(out[ID]).to_numpy(float)
+        gold = out[t+'__gold'].eq(1).to_numpy()
+        known = np.isfinite(aligned) & ~gold
+        out[t] = out[t].astype(float)
+        out.loc[~gold, t] = smooth_soft_targets(aligned[~gold], epsilon)
+        out.loc[~gold, t+'__mask'] = known[~gold].astype(int)
+        out.loc[~gold, t+'__weight'] = np.where(known[~gold], weight, 0.)
+        out.loc[~gold, t+'__source'] = np.where(known[~gold], 'community_soft', 'none')
+        out.loc[~gold, t+'__state'] = np.where(known[~gold], 'soft', 'unmentioned')
+    validate_labels(out)
+    if not out[[t+'__mask' for t in TARGETS]].to_numpy(bool)[~out.has_gold.astype(bool)].any():
+        raise ValueError('No usable community targets for non-gold studies')
+    provenance = dict(filename=path.name, sha256=file_hash(path), epsilon=epsilon,
+                      weight=weight, column_map=mapping, rows=len(frame),
+                      missing_studies=len(set(labels[ID])-set(frame.index)))
+    return out, provenance
 
 
 def audit_labels(labels):
@@ -158,7 +221,7 @@ def audit_labels(labels):
             m = block[t+'__mask'].eq(1) & block[t+'__weight'].gt(0)
             g = block[t+'__gold'].eq(1)
             rows.append(dict(fold=int(fold), target=t, studies=len(block), positive=int((m & block[t].eq(1)).sum()),
-                             negative=int((m & block[t].eq(0)).sum()), unknown=int((~m).sum()),
+                             negative=int((m & block[t].eq(0)).sum()), soft=int((m & block[t].gt(0) & block[t].lt(1)).sum()), unknown=int((~m).sum()),
                              verified_positive=int((g & block[t].eq(1)).sum()),
                              verified_negative=int((g & block[t].eq(0)).sum())))
     return pd.DataFrame(rows)

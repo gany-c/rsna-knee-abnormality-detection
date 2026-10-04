@@ -16,7 +16,11 @@ This experiment incorporates those training features, rather than copying the Bi
 
 ## Inputs and setup
 
-Attach the complete `gany24558/rsna-knee-normalized-training-data` dataset and the original competition data. Generated report labels, verified-label overrides, confidence weights, fold/group identifiers and normalized MRI tensors are already in the custom dataset. The notebook validates all active shards, archive offsets, label checksums and preprocessing identity. Verified labels must match official train.csv exactly.
+Attach `nartaa/rsna-knee-hpo-assets`, the original competition data, and a completed normalized image dataset. The default `DATASET_HANDLE` is `gany24558/rsna-knee-normalized-training-data` (3,917 studies), for comparison with the earlier CNN using the same images. Set it to `gany24558/rsna-knee-normalized-all-training-data` to use all 4,407 studies. Attach all shards of the selected bundle; `DATASET_ROOT` can override discovery but must match the handle.
+
+The notebook discovers `labels_v1_blend.parquet` under `/kaggle/input`, including nested Kaggle dataset paths. If multiple copies exist, set `COMMUNITY_LABELS_PATH` explicitly. Columns are matched by name and rows by StudyInstanceUID, never by position. `COMMUNITY_COLUMN_MAP` permits an explicit alternate schema. Duplicate IDs, foreign study IDs, missing columns and probabilities outside [0,1] are rejected.
+
+Bundled metadata supplies official labels and grouping information. Community probabilities replace every nonofficial target; missing community values remain masked, with no fallback to our older generated labels. Official targets remain exact binary values with weight 1. Community targets are smoothed once using `p * (1 - 2 * COMMUNITY_EPSILON) + COMMUNITY_EPSILON`, with epsilon 0.05, and assigned `COMMUNITY_WEIGHT=0.25`. These settings are configurable. The current community table supplies 4,349 studies; the remaining 58 have official labels. Only studies with images in the selected bundle can train. The notebook validates all active shards, archive offsets, label checksums and preprocessing identity. Verified labels must match official train.csv exactly.
 
 Enable a GPU. Internet is enabled for downloading the official ImageNet weights and uploading the trained package. An attached official torchvision ResNet34 state dictionary may instead be supplied through PRETRAINED_PATH. Do not download training packages or new dependencies implicitly. Kaggle's submission notebook must later run offline; this is a training notebook.
 
@@ -62,7 +66,7 @@ This head uses pooling and a linear classifier, not Transformer attention. All c
 
 ## Loss and optimization
 
-For each target, the label mask indicates whether a usable label exists. Unknown targets contribute zero loss; they never become negative examples. Verified labels keep weight 1; accepted generated-label confidence weights are retained.
+For each target, the label mask indicates whether a usable label exists. Unknown targets contribute zero loss; they never become negative examples. Verified labels keep weight 1; known community targets use COMMUNITY_WEIGHT (default 0.25). Soft targets stay floating point throughout; binary cross-entropy with logits supports them directly.
 
 Training loss is binary cross-entropy with logits, multiplied by the target mask and confidence weight and divided by the sum of active weights within the study. Accumulate gradients across four studies, including correct normalization for the last shorter accumulation window. Every training study is visited once per epoch in shuffled order.
 
@@ -86,6 +90,8 @@ Maximum 35 epochs, with a 7.5-hour session budget. Export only the best fully va
 
 `best.pt` holds the best validation model. `last.pt` records the last complete epoch, optimizer, scheduler, AMP scaler, random states, patience counter, history and best state. Resume only from your own trusted checkpoint, with the identical configuration, data identity, split and runtime source. Save/attach the private output before starting another Kaggle session. This checkpoint includes a trusted Python serialization and is not intended for arbitrary external sources.
 
+`label_provenance.json` records the community file hash, column mapping, smoothing and weight; these also enter the run identity so an old-label checkpoint cannot resume this run. `label_audit_private.csv` reports soft, binary, unknown and official target counts.
+
 `history.csv`, `validation_predictions_private.csv`, `split_private.csv`, `run_identity.json` and `training_status.json` remain outside the uploaded package. Inspect curves and per-target support; lower training loss alone does not establish better validation ranking.
 
 ## Export and separate Kaggle Model
@@ -101,7 +107,7 @@ Restore the best epoch and write `model_package/` containing:
 
 Reload the saved checkpoint into a fresh model and compare synthetic predictions before upload. Upload only model_package, never the entire training directory. The final cell uses kagglehub.model_upload to create the separate CNN variation or add a version. New models default to private; existing visibility is retained. Internet/authentication failures leave the local export intact, so only the upload cell needs retrying.
 
-The existing DINOv2 submission notebook does **not** support this architecture. A CNN inference adapter must load this ResNet34 package and reproduce its validation image preparation and pooling before evaluating it on Kaggle. This training notebook does not produce submission.csv.
+The existing DINOv2 submission notebook does **not** support this architecture. Use the existing `inference/resnet34/submit-knee-resnet34.ipynb` and attach the newly uploaded CNN model version. Its image preparation and pooling contract is unchanged. This training notebook does not produce submission.csv.
 
 ## Validation status
 

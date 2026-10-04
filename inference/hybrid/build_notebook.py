@@ -11,8 +11,8 @@ Default: **80% ResNet34 + 20% DINOv2**, applied to probabilities for each study/
 
 Attach these four inputs on Kaggle:
 1. **RSNA Knee Abnormality Detection** competition data.
-2. **gany24558/gc-rsna-knee-resnet34 → PyTorch → study-mil** — choose the model version used by your successful ResNet submission.
-3. **gany24558/gc-rsna-knee-dinov2 → PyTorch → five-fold-attention** — choose the model version used by your successful DINOv2 submission.
+2. **gany24558/gc-rsna-knee-resnet34 → PyTorch → study-mil → version 2**.
+3. **gany24558/rsna-knee-dinov2 → PyTorch → community-dataset → version 1** (3,917-study run, public score 0.756).
 4. **gany24558/rsna-dicom-decoders** — the Python 3.12 Linux GDCM wheel dataset.
 
 Enable a **GPU**, disable **Internet**, start a **fresh session**, and run all cells. No training datasets, reports, API tokens, or original pretrained models are needed. All code is embedded; upload only this notebook.
@@ -24,8 +24,8 @@ import time
 SESSION_STARTED = time.monotonic()
 INPUT_ROOT = Path('/kaggle/input')
 OUTPUT_ROOT = Path('/kaggle/working')
-RESNET_PACKAGE = None # Explicit manifest.json parent if multiple versions are attached
-DINOV2_PACKAGE = None
+RESNET_PACKAGE = Path('/kaggle/input/models/gany24558/gc-rsna-knee-resnet34/pytorch/study-mil/2')
+DINOV2_PACKAGE = Path('/kaggle/input/models/gany24558/rsna-knee-dinov2/pytorch/community-dataset/1')
 COMPETITION_ROOT = None
 WHEELHOUSE = None
 WEIGHTS = {'resnet34': 0.80, 'dinov2': 0.20} # Must sum to 1; same weights for all 12 findings

@@ -14,7 +14,7 @@ ID = 'StudyInstanceUID'
 TARGETS = ['ACL','MCL','Medial Meniscus','Lateral Meniscus','Medial OA','Lateral OA',
            'PF OA','Effusion','Synovitis',"Baker's",'Contusion','Fracture']
 HANDLES = {'resnet34':'gany24558/gc-rsna-knee-resnet34/pyTorch/study-mil',
-           'dinov2':'gany24558/gc-rsna-knee-dinov2/pyTorch/five-fold-attention'}
+           'dinov2':'gany24558/rsna-knee-dinov2/pyTorch/community-dataset'}
 
 def json_write(path, obj):
     path=Path(path); tmp=path.with_suffix('.json.tmp')

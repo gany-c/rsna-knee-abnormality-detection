@@ -2,12 +2,12 @@ from pathlib import Path
 import ast,json
 import nbformat as nb
 BASE=Path(__file__).parent
-WORKSPACE=Path('/Users/ganapathychidambaram/Documents/RSNA Knee MRI')
-source=(WORKSPACE/'training_build/knee_training.py').read_text();tree=ast.parse(source);lines=source.splitlines(keepends=True)
-names={'fingerprint','file_hash','atomic_json','atomic_torch','select_one','find_input_files','discover_bundle','safe_member','load_bundle','validate_labels','audit_labels','read_native','evaluate_metrics'}
+DINO_SOURCE=BASE.parent/'dinov2'
+source=(DINO_SOURCE/'knee_training.py').read_text();tree=ast.parse(source);lines=source.splitlines(keepends=True)
+names={'fingerprint','file_hash','atomic_json','atomic_torch','select_one','find_input_files','discover_bundle','safe_member','load_bundle','validate_labels','smooth_soft_targets','apply_community_labels','audit_labels','read_native','evaluate_metrics'}
 header=source[:source.index('def fingerprint')]
 support=header+'\n'.join(''.join(lines[n.lineno-1:n.end_lineno])+'\n' for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in names)
-runtime=(BASE/'cnn_runtime.py').read_text();prep=(WORKSPACE/'training_build/native_preprocessing.py').read_text()
+runtime=(BASE/'cnn_runtime.py').read_text();prep=(DINO_SOURCE/'native_preprocessing.py').read_text()
 for name,text in [('knee_data.py',support),('cnn_runtime.py',runtime),('native_preprocessing.py',prep)]:compile(text,name,'exec')
 (BASE/'knee_data.py').write_text(support)
 cells=[]
@@ -17,14 +17,22 @@ md('''# RSNA Knee MRI — ResNet34 CNN training
 
 A separate end-to-end CNN experiment. It borrows learning-rate groups, best-checkpoint saving and scheduling from the BirdCLEF notebooks; MRI preparation and label handling are specific to this competition.
 
-Attach **gany24558/rsna-knee-normalized-training-data** (all completed shards) and the original competition data. Generated labels are already bundled. Enable a **GPU** and **Internet** for ImageNet weights and final Kaggle Model upload. If using attached ResNet34 ImageNet weights, set PRETRAINED_PATH. Do not attach DINO feature caches: CNN weights change during training.
+Attach **gany24558/rsna-knee-normalized-training-data** (all completed shards) and the original competition data. Also attach **nartaa/rsna-knee-hpo-assets** containing **labels_v1_blend.parquet**. Community soft labels replace the bundled generated labels; official labels remain unchanged. DATASET_HANDLE selects the original 3,917-study image bundle or the full 4,407-study bundle. Enable a **GPU** and **Internet** for ImageNet weights and final Kaggle Model upload. If using attached ResNet34 ImageNet weights, set PRETRAINED_PATH. Do not attach DINO feature caches: CNN weights change during training.
 
 The split holds out 20% of patient groups (or study groups if patient identities are unavailable). Only verified labels in held-out groups determine validation loss and AUROC. All labels in those groups are excluded from training. Early stopping: **three consecutive epochs without strictly lower validation loss**. The best epoch is exported, not the final epoch.
 
-Upload destination: **gany24558/gc-rsna-knee-resnet34 / PyTorch / study-mil**. The final cell automatically uploads the real trained package when run. This notebook does not launch training until you run it on Kaggle. Keep the notebook/model private. The existing DINO submission notebook cannot load CNN weights; a CNN-specific inference adapter is needed later.
+Upload destination: **gany24558/gc-rsna-knee-resnet34 / PyTorch / study-mil**. The final cell automatically uploads the real trained package when run. This notebook does not launch training until you run it on Kaggle. Keep the notebook/model private. The existing DINO submission notebook cannot load CNN weights; use the ResNet34 submission notebook with the newly uploaded model version.
 ''')
 code('''from pathlib import Path
 DATASET_ROOT = None
+# Keep the original image subset for a controlled comparison of label sets.
+DATASET_HANDLE = 'gany24558/rsna-knee-normalized-training-data'
+# For all 4,407 studies, instead use:
+# DATASET_HANDLE = 'gany24558/rsna-knee-normalized-all-training-data'
+COMMUNITY_LABELS_PATH = None # Auto-discover labels_v1_blend.parquet under /kaggle/input
+COMMUNITY_COLUMN_MAP = None # Optional mapping from our target names to parquet columns
+COMMUNITY_EPSILON = 0.05 # Smooth community targets once: p * 0.9 + 0.05
+COMMUNITY_WEIGHT = 0.25 # Official targets retain weight 1
 COMPETITION_ROOT = None
 PRETRAINED_PATH = None # Optional attached official torchvision resnet34 state dictionary
 RESUME_CHECKPOINT = None # Your own trusted last.pt from an earlier identical run
@@ -54,7 +62,7 @@ if min(CFG[k] for k in ['microbatch','accumulate','slices_per_series','max_train
     raise ValueError('Training sizes must be positive')
 torch.manual_seed(CFG['seed']);np.random.seed(CFG['seed']);random.seed(CFG['seed'])
 DEVICE=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-ROOT=data.discover_bundle(DATASET_ROOT)
+ROOT=data.discover_bundle(DATASET_ROOT,dataset_handle=DATASET_HANDLE)
 SERIES,LABELS,ALL_LABELS,INDEX=data.load_bundle(ROOT)
 if INDEX['preprocessing'].get('implementation')!='ef1a2effbba938df32d512f010e3786904efc0cda3d04c95b074e29265018b5d':
     raise ValueError('Unexpected preprocessing implementation; audit before changing the contract')
@@ -71,8 +79,18 @@ for target in data.TARGETS:
         raise ValueError('Verified mask drift: '+target)
     if not np.array_equal(original[target].to_numpy()[gold],ALL_LABELS[target].to_numpy()[gold]):
         raise ValueError('Verified label drift: '+target)
+if COMMUNITY_LABELS_PATH is None:
+    COMMUNITY_LABELS_PATH=data.select_one(
+        list(data.find_input_files('/kaggle/input','labels_v1_blend.parquet')),
+        'COMMUNITY_LABELS_PATH (attach nartaa/rsna-knee-hpo-assets)')
+ALL_LABELS,LABEL_PROVENANCE=data.apply_community_labels(
+    ALL_LABELS,COMMUNITY_LABELS_PATH,COMMUNITY_EPSILON,COMMUNITY_WEIGHT,COMMUNITY_COLUMN_MAP)
+LABELS=ALL_LABELS.loc[ALL_LABELS[data.ID].isin(SERIES[data.ID])].copy().sort_values(data.ID).reset_index(drop=True)
+print('Community labels:',COMMUNITY_LABELS_PATH)
+print('Image dataset:',DATASET_HANDLE,'Studies with images:',len(LABELS))
+print('Community rows:',LABEL_PROVENANCE['rows'],'Official study records:',int(ALL_LABELS.has_gold.sum()))
 TRAIN,VAL,HELD_GROUPS=cnn.split_studies(LABELS,CFG['val_fraction'],CFG['seed'])
-IDENTITY=dict(configuration=CFG,dataset=INDEX['identity'],
+IDENTITY=dict(configuration=CFG,dataset=INDEX['identity'],label_provenance=LABEL_PROVENANCE,
               split_hash=data.fingerprint({'train':TRAIN[data.ID].tolist(),'held':sorted(HELD_GROUPS)}),
               source_hash=data.fingerprint(SOURCE_FILES),initialization='ImageNet ResNet34' if PRETRAINED_PATH is None else data.file_hash(PRETRAINED_PATH))
 WORK=OUTPUT_ROOT/data.fingerprint(IDENTITY)[:16];WORK.mkdir(parents=True,exist_ok=True)
@@ -82,13 +100,15 @@ split['used_for_validation']=split[data.ID].isin(VAL[data.ID])
 split['used_for_training']=split[data.ID].isin(TRAIN[data.ID])
 split.to_csv(WORK/'split_private.csv',index=False)
 data.atomic_json(WORK/'run_identity.json',IDENTITY)
+data.atomic_json(WORK/'label_provenance.json',LABEL_PROVENANCE)
+data.audit_labels(LABELS).to_csv(WORK/'label_audit_private.csv',index=False)
 print('Training studies:',len(TRAIN),'Verified validation studies:',len(VAL))
 print('All held-out studies:',split.role.eq('held_out').sum())
 print('Grouping:', 'study only; patient separation unavailable' if LABELS.patient_group.eq(LABELS[data.ID]).all() else 'provided patient groups')
 display(data.audit_labels(VAL))
 MODEL=cnn.ResNetKnee(pretrained=RESUME_CHECKPOINT is None,weights_path=PRETRAINED_PATH,dropout=CFG['dropout']).to(DEVICE)
 ''')
-md('## Train the CNN and classifier\nAdam uses 1e-5 for the pretrained CNN and 1e-4 for the head. Validation uses deterministic slices and all usable series. Each epoch scans all training studies. Checkpointing and accumulation bound GPU memory; BatchNorm running statistics stay fixed. If the session budget is reached, resume from last.pt in a new session. Only completed validated epochs are eligible for export.')
+md('## Train the CNN and classifier\nCommunity probabilities stay floating point and use masked binary cross-entropy with logits; missing values contribute no loss. Official validation targets are neither smoothed nor replaced. Adam uses 1e-5 for the pretrained CNN and 1e-4 for the head. Validation uses deterministic slices and all usable series. Each epoch scans all training studies. Checkpointing and accumulation bound GPU memory; BatchNorm running statistics stay fixed. If the session budget is reached, resume from last.pt in a new session. Only completed validated epochs are eligible for export.')
 code('''BEST,HISTORY,STOP_REASON=cnn.train_model(MODEL,TRAIN,VAL,SERIES,INDEX['identity']['run_id'],CFG,WORK,IDENTITY,RESUME_CHECKPOINT)
 print('Stop reason:',STOP_REASON,'Best epoch:',BEST['epoch'],'Validation loss:',BEST['val_loss'])
 display(pd.DataFrame(HISTORY))
@@ -104,7 +124,7 @@ code('''if UPLOAD_MODEL:
     for name,digest in manifest['files'].items():
         if data.file_hash(PACKAGE/name)!=digest:raise ValueError('Export changed: '+name)
     kagglehub.model_upload(MODEL_HANDLE,str(PACKAGE),version_notes=(
-        f"ResNet34; grouped holdout; best epoch {BEST['epoch']}; verified BCE {BEST['val_loss']:.6f}; patience 3"))
+        f"ResNet34; community soft labels; grouped holdout; best epoch {BEST['epoch']}; verified BCE {BEST['val_loss']:.6f}; patience 3"))
     print('Upload accepted: https://www.kaggle.com/models/'+MODEL_HANDLE)
 else:
     print('Upload disabled; package remains at',PACKAGE)
