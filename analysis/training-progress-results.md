@@ -80,14 +80,6 @@ Both initial training runs stopped at our configured **7.5-hour time budget**. A
 
 - **Monday, Oct 5:** the run resumed on Oct 4 completed through **epoch 18**, then early-stopped and exported **epoch 15**. Thus “15 epochs total” in the journal refers to the selected checkpoint, not the final completed epoch. Inference achieved **0.839**. Checkpoint selection uses minimum validation loss, not maximum AUROC.
 
-## Stage Comparison
-
-| Date (IST) | Labels / image subset | Studies | DINOv2 OOF | DINOv2 public | ResNet public | Best hybrid public |
-|---|---|---:|---:|---:|---:|---:|
-| Sep 25–28 (approx.) | Our labels + official | 3,917 | — | 0.607 | 0.679 | 0.688 |
-| Sep 28–Oct 6 | Community + official | 3,917 | 0.7356 | 0.756 | **0.839** | 0.830 |
-| Sep 30–Oct 1 | Community + official | 4,407 | 0.7228 | 0.748 | Untested | Untested |
-
 ## 6. Oct 6 - Resnet 8 triplet experiment
 
 | Experiment | Exported epoch | Val loss | Val macro AUROC | Submission | Public score |
