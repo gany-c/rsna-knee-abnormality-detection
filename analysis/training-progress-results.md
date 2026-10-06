@@ -1,9 +1,5 @@
 # Training Progress Results
 
-**Created:** October 1, 2026 · **Last updated:** October 6, 2026 (Asia/Kolkata)
-
-*Submission timing is sourced from the Kaggle history supplied on October 6, 2026. Calendar dates inferred from its rounded ages are approximate. Training chronology comes from notebook logs and the journal. V-numbers are submission versions unless stated otherwise.*
-
 ## 1. First pass, self generated labels + competition labels
 
 We used an LLM to generate labels from the radiology reports and combined them with the official competition labels. We normalized and used images only for studies with usable labels, giving **3,917 studies**. Images from studies without usable labels were not used. Hybrid predictions used probability averaging.
