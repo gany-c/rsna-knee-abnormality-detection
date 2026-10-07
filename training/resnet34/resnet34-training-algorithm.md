@@ -140,3 +140,15 @@ Local tests use synthetic normalized MRI shards and a real randomly initialized 
 | Checkpoint | Saved model/training state for reuse or resumption. |
 
 Reference: [torchvision ResNet34](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.resnet34.html). The documented pretrained transform uses a center crop; this MRI experiment deliberately uses the full field of view, and records that difference.
+
+## Resuming the community-label run
+
+The restored four-triplet notebook defaults to `RESUME_CHECKPOINT=None`, which starts fresh training; it has no `RESUME_TRAINING` flag. To resume, attach the prior private training output containing `last.pt`, along with the original normalized dataset and community labels, and set `RESUME_CHECKPOINT` explicitly to that file. The training runtime restores model, optimizer, scheduler, scaler and random states. Keep the original configuration and inputs unchanged. Each resumed session receives a fresh 7.5-hour budget, with 35 total epochs and patience 3.
+
+The separate eight-triplet builder defaults to `RESUME_TRAINING=False`. For a continuation of that experiment, set `RESUME_TRAINING=True` and attach its own compatible `last.pt`; auto-discovery requires exactly one checkpoint, otherwise set `RESUME_CHECKPOINT` explicitly. Its additional preflight checks reject missing, incompatible, or already-finished checkpoints.
+
+## October 5, 2026 — eight-triplet experiment
+
+Use `train-knee-resnet34-8-triplets.ipynb`. This new experiment sets `slices_per_series=8`, `RESUME_TRAINING=False`, and `RESUME_CHECKPOINT=None`. It uploads to `gany24558/gc-rsna-knee-resnet34/pyTorch/comm-dataset-slice-8`. The completed four-triplet notebook is preserved separately. Each series supplies up to eight three-channel adjacent-slice triplets (short series use all available centers). Existing normalized images are reused; no preprocessing rebuild is required. All other CFG settings and label settings remain unchanged. Start from ImageNet weights for this controlled experiment; subsequent sessions may resume only this experiment's own compatible last.pt. The exported configuration records eight triplets for inference. Use an explicit MODEL_PACKAGE path for the new variation because the existing submission notebook's automatic discovery is specific to study-mil. GPU work increases; the same session time budget may complete fewer epochs.
+
+**Result:** We tried the eight-triplet variation, but it did not improve the public score: **0.831** (ResNet submission V14) versus **0.839** for the resumed four-triplet model (submission V9), a decrease of **0.008**.
