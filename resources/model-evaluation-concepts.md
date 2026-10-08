@@ -97,6 +97,36 @@ The saved “best” checkpoint depends on the chosen measure. The epoch with th
 
 Lower training loss does not guarantee better predictions on unseen examples.
 
+### Run, session, epoch and fold: how they fit together
+
+| Term | Simple meaning | Example |
+|---|---|---|
+| Training run | One model's training history, from initialization through any resumptions to completion. | Train a model until early stopping selects its best checkpoint. |
+| Session | One period when the code is executing on a machine or notebook service. | A GPU session ends after a time budget; another session resumes the saved training state. |
+| Epoch | One pass through the training examples, under the pipeline's sampling rules. | Visit each training study once, sampling some of its images. |
+| Fold | One data group in cross-validation, taking its turn as the held-out validation group. | Divide the evaluation-eligible studies into five groups, A–E. |
+
+These terms describe different things: **folds divide the data, epochs count training passes, sessions divide execution time, and runs track a model's training history.**
+
+For example, one model might complete epochs 1–10 in its first session, resume at epoch 11 in its second session, and finish at epoch 18. That is **one training run, two sessions, and eighteen completed epochs**. Its best saved checkpoint might be from epoch 15 rather than epoch 18.
+
+If we start again from the initial pretrained weights instead of restoring the checkpoint, that is a **new training run**, even if we use the same data and settings. It repeats training rather than continuing the earlier model.
+
+In five-fold cross-validation, we normally train **five separate models**: one holds out group A, another holds out B, and so on. Each model has its own epochs, early-stopping decision, and potentially several execution sessions. A limit of 35 epochs applies to each model, not to all five models combined.
+
+```text
+Five-fold experiment
+├── Model holding out A → training run → session 1, session 2, …
+├── Model holding out B → training run → session 1, session 2, …
+├── Model holding out C → training run → session 1, session 2, …
+├── Model holding out D → training run → session 1, session 2, …
+└── Model holding out E → training run → session 1, session 2, …
+
+Each training run advances through its own epochs.
+```
+
+Terminology varies: a notebook platform may also call a single notebook execution a “run,” even when it trains several fold models. Here, **training run** means one model's continuing training history; **session** means an execution period. A storage **shard** is separate from all of these—it is a chunk of saved data, not a training pass or validation group.
+
 ## 7. Folds and cross-validation
 
 A **fold** is a group of examples used in cross-validation.
