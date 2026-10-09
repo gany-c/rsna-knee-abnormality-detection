@@ -1,59 +1,64 @@
-# RSNA Knee Abnormality Detection --- Notes
+# RSNA Knee Abnormality Detection — Notes
 
 ## 1. Multimodal Data
 
 **Multimodal data** means using more than one type of information in a
 machine-learning problem.
 
-Examples of modalities include: - Images - Text - Audio/video - Tabular
-or numerical data - Time-series data
+Examples of modalities include:
+
+- Images
+- Text
+- Audio/video
+- Tabular or numerical data
+- Time-series data
 
 For a knee MRI problem, a multimodal model could potentially combine MRI
 images with radiology reports, clinical information, or acquisition
 metadata.
 
-------------------------------------------------------------------------
+---
 
 ## 2. Knee Abnormality Labels
 
 The competition predicts several abnormalities:
 
--   **ACL** --- Injury to the anterior cruciate ligament, an important
+-   **ACL** — Injury to the anterior cruciate ligament, an important
     ligament inside the knee that helps control forward movement and
     twisting.
--   **MCL** --- Injury to the medial collateral ligament, which
+-   **MCL** — Injury to the medial collateral ligament, which
     stabilizes the inner side of the knee.
--   **Medial Meniscus** --- Tear of the shock-absorbing cartilage on the
+-   **Medial Meniscus** — Tear of the shock-absorbing cartilage on the
     inner side of the knee.
--   **Lateral Meniscus** --- Tear of the shock-absorbing cartilage on
+-   **Lateral Meniscus** — Tear of the shock-absorbing cartilage on
     the outer side of the knee.
--   **Medial OA** --- Osteoarthritis (wear and tear) affecting the inner
+-   **Medial OA** — Osteoarthritis (wear and tear) affecting the inner
     part of the knee joint.
--   **Lateral OA** --- Osteoarthritis affecting the outer part of the
+-   **Lateral OA** — Osteoarthritis affecting the outer part of the
     knee joint.
--   **PF OA** --- Patellofemoral osteoarthritis, affecting the joint
+-   **PF OA** — Patellofemoral osteoarthritis, affecting the joint
     around/behind the kneecap.
--   **Effusion** --- Excess fluid inside the knee joint, often
+-   **Effusion** — Excess fluid inside the knee joint, often
     associated with injury or inflammation.
--   **Synovitis** --- Inflammation of the lining of the knee joint.
--   **Baker's cyst** --- A fluid-filled swelling behind the knee, often
+-   **Synovitis** — Inflammation of the lining of the knee joint.
+-   **Baker's cyst** — A fluid-filled swelling behind the knee, often
     associated with other knee problems.
--   **Contusion** --- A bone bruise: injury inside a bone without an
+-   **Contusion** — A bone bruise: injury inside a bone without an
     actual fracture.
--   **Fracture** --- A crack or break in a bone.
+-   **Fracture** — A crack or break in a bone.
 
 A useful grouping is:
 
-  Category                    Labels
-  --------------------------- -----------------------------------
-  Ligaments                   ACL, MCL
-  Menisci / shock absorbers   Medial Meniscus, Lateral Meniscus
-  Osteoarthritis              Medial OA, Lateral OA, PF OA
-  Fluid / inflammation        Effusion, Synovitis
-  Fluid-filled cyst           Baker's cyst
-  Bone injuries               Contusion, Fracture
+| Category | Labels |
+|---|---|
+| Ligaments | ACL, MCL |
+| Menisci / shock absorbers | Medial Meniscus, Lateral Meniscus |
+| Osteoarthritis | Medial OA, Lateral OA, PF OA |
+| Fluid / inflammation | Effusion, Synovitis |
+| Fluid-filled cyst | Baker's cyst |
+| Bone injuries | Contusion, Fracture |
 
-------------------------------------------------------------------------
+---
 
 ## 3. Study-Level Labels
 
@@ -65,7 +70,7 @@ rather than for a particular image.
 
 For example:
 
-``` text
+```text
 Study 101
   ├── Series 1
   ├── Series 2
@@ -84,7 +89,7 @@ tell us which individual MRI slice shows the injury.
 Therefore, study-level labels should not automatically be copied onto
 every image in the study.
 
-------------------------------------------------------------------------
+---
 
 ## 4. Series-Level Acquisition Metadata
 
@@ -93,7 +98,7 @@ set of images acquired using a particular MRI orientation or sequence.
 
 The hierarchy is:
 
-``` text
+```text
 Study
   └── Series
         └── Individual MRI images/slices
@@ -102,25 +107,23 @@ Study
 **Series-level acquisition metadata** describes **how a particular MRI
 series was acquired**, rather than the diagnosis.
 
-Examples can include: - Anatomical plane: sagittal, coronal, axial - MRI
-sequence/type - Fat suppression - Fluid sensitivity - Slice thickness -
-Pixel spacing/resolution - Repetition time (TR) - Echo time (TE) - Other
-scanner/acquisition parameters
+Examples can include:
 
-In short:
+- Anatomical plane: sagittal, coronal, axial
+- MRI sequence/type
+- Fat suppression
+- Fluid sensitivity
+- Slice thickness
+- Pixel spacing/resolution
+- Repetition time (TR)
+- Echo time (TE)
+- Other scanner/acquisition parameters
 
-  -----------------------------------------------------------------------
-  Level                   Example                 Meaning
-  ----------------------- ----------------------- -----------------------
-  Study-level label       ACL = 1                 What abnormality is
-                                                  present
-
-  Series-level metadata   Sagittal,               How that series was
-                          fat-suppressed          acquired
-
-  Image data              MRI pixels              What the anatomy
-                                                  actually looks like
-  -----------------------------------------------------------------------
+| Level | Example | Meaning |
+|---|---|---|
+| Study-level label | `ACL = 1` | What abnormality is present |
+| Series-level metadata | Sagittal, fat-suppressed | How that series was acquired |
+| Image data | MRI pixels | What the anatomy actually looks like |
 
 ### Standard anatomical planes
 
@@ -163,14 +166,15 @@ from the training-ready manifest. **The source images are not deleted.**
 The failed-series diagnostic cells display original slices and print the
 measured angle, cutoff, and closest standard plane in red for review.
 
-------------------------------------------------------------------------
+---
 
 ## 5. Efficiency Score
 
 The competition's efficiency metric is:
 
-\[ Efficiency = `\frac{AUC}{Benchmark - \max AUC}`{=tex} +
-`\frac{RuntimeSeconds}{32400}`{=tex} \]
+$$
+\mathrm{Efficiency} = \frac{\mathrm{AUC}}{\mathrm{Benchmark} - \mathrm{AUC}_{\max}} + \frac{\mathrm{RuntimeSeconds}}{32{,}400}
+$$
 
 The objective is to **minimize** this score.
 
@@ -178,7 +182,9 @@ The objective is to **minimize** this score.
 
 Because normally:
 
-\[ Benchmark - `\max `{=tex}AUC \< 0 \]
+$$
+\mathrm{Benchmark} - \mathrm{AUC}_{\max} < 0
+$$
 
 Therefore, increasing AUC makes the first term more negative, which
 lowers the efficiency score.
@@ -193,7 +199,9 @@ So the metric rewards:
 
 ### Why divide runtime by 32,400?
 
-\[ 32400`\text{ seconds}`{=tex} = 9`\text{ hours}`{=tex} \]
+$$
+32{,}400\ \text{seconds} = 9\ \text{hours}
+$$
 
 The divisor normalizes runtime onto a manageable numerical scale. A
 9-hour runtime contributes `1.0` to the runtime term, while a 1-hour
