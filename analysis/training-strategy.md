@@ -83,11 +83,7 @@ Reserve these studies from training if we intend to use their future labels as a
 
 This is a deliberately selected excluded-study set, not a random sample of the competition population. Report its results separately. If we later use these labels to train a model, those studies cease to be an independent evaluation set for that model.
 
-## 6. Experiment discipline
-
-Record the exact data subset, folds, model version, configuration, validation results, runtime, and public score in the progress report. Change one major factor at a time, retain the best existing checkpoint, and assess improvements on consistent validation data. A single public-score change does not establish that a modification caused a general improvement.
-
-## 7. Proposed next-iteration pooling experiment — October 13, 2026
+## 6. Proposed next-iteration pooling experiment — October 13, 2026
 
 Start with a small **gated-attention pooling layer across series**, replacing the current equal average of series vectors. Retain the existing mean/max pooling of triplet features within each series. Keep slice sampling, data, validation splits, and training settings fixed to isolate the fusion change; train and evaluate a new model.
 
@@ -158,6 +154,8 @@ These are proposals, not implemented changes or demonstrated improvements on our
 
 ## Learning strategy
 
-1. Understand how missing labels are masked during training.
-2. Explore new ideas from the discussion forums.
-3. Read through the training notebook code.
+1. Understand fluid sensitivity and fat suppression 
+2. Read the 2 new documents provided by Dr. Amitesh Khare
+3. Understand how missing labels are masked during training.
+4. Explore new ideas from the discussion forums.
+5. Read through the training notebook code.
