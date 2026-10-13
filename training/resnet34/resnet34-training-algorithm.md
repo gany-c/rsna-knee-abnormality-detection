@@ -66,11 +66,52 @@ This head uses pooling and a linear classifier, not Transformer attention. All c
 
 ## Loss and optimization
 
-For each target, the label mask indicates whether a usable label exists. Unknown targets contribute zero loss; they never become negative examples. Verified labels keep weight 1; known community targets use COMMUNITY_WEIGHT (default 0.25). Soft targets stay floating point throughout; binary cross-entropy with logits supports them directly.
+Here’s a plain-language rewrite for a regular software engineer:
 
-Training loss is binary cross-entropy with logits, multiplied by the target mask and confidence weight and divided by the sum of active weights within the study. Accumulate gradients across four studies, including correct normalization for the last shorter accumulation window. Every training study is visited once per epoch in shuffled order.
+## Loss and optimization
 
-Use Adam with backbone learning rate 1e-5 and head learning rate 1e-4. Use cosine warm restarts (10-epoch cycles, minimum learning rate 1e-6), mixed precision on CUDA, gradient clipping at norm 1, and image microbatches of eight. Activation checkpointing recomputes CNN activations during backward to reduce memory. These are starting settings, not validated optimal hyperparameters.
+For each prediction target, a **label mask** tells the training loop whether we have a usable label for that example. If a target is unknown, it is ignored in the loss calculation—it is never treated as a negative example just because we do not know its value.
+
+Labels have different confidence levels:
+
+- **Verified labels** get full weight: `1.0`.
+- **Community-provided labels** get lower weight: `COMMUNITY_WEIGHT`, defaulting to `0.25`.
+- **Soft labels**—probabilities between 0 and 1 rather than hard 0/1 labels—are kept as floating-point values throughout training.
+
+The model uses **binary cross-entropy with logits** (`BCEWithLogitsLoss`) as its loss function. This loss supports soft probability labels directly, so the labels do not need to be rounded to 0 or 1.
+
+For each training example, the loss is calculated as:
+
+\[
+\text{loss} = \frac{\text{BCE loss} \times \text{label mask} \times \text{confidence weight}}{\text{sum of active confidence weights in the study}}
+\]
+
+In other words, only labeled targets contribute, and the loss is normalized by the total confidence weight available in that study. This prevents studies with many labeled targets from dominating the gradient simply because they have more active labels.
+
+## Gradient accumulation
+
+Gradients are accumulated across **four studies** before the optimizer updates the model weights. This effectively creates a larger training batch without needing to load all four studies into GPU memory at once.
+
+If the final group has fewer than four studies, its loss is normalized correctly so that the shorter accumulation window does not accidentally produce an outsized update.
+
+Each study is used exactly once per epoch, and the order of studies is shuffled every epoch.
+
+## Optimizer and training settings
+
+The current training configuration is:
+
+- **Optimizer:** Adam.
+- **Backbone learning rate:** `1e-5`.
+- **Classification head learning rate:** `1e-4`.
+- **Learning-rate schedule:** Cosine warm restarts, with 10-epoch cycles and a minimum learning rate of `1e-6`.
+- **Mixed precision:** Enabled when training on CUDA GPUs.
+- **Gradient clipping:** Gradients are clipped to a maximum global norm of `1`.
+- **Image microbatch size:** `8`.
+- **Activation checkpointing:** Enabled.
+
+Activation checkpointing saves GPU memory by not storing all intermediate CNN activations during the forward pass. Instead, it recomputes them during the backward pass when needed for backpropagation. This trades some extra computation for lower memory usage.
+
+These values are sensible initial defaults, but they have not been established as optimal through a formal hyperparameter search.
 
 ## Validation and stopping
 
