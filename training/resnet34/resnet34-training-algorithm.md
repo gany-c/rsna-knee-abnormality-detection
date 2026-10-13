@@ -79,9 +79,9 @@ The model uses **binary cross-entropy with logits** (`BCEWithLogitsLoss`) as its
 
 For each training example, the loss is calculated as:
 
-\[
+$$
 \text{loss} = \frac{\text{BCE loss} \times \text{label mask} \times \text{confidence weight}}{\text{sum of active confidence weights in the study}}
-\]
+$$
 
 In other words, only labeled targets contribute, and the loss is normalized by the total confidence weight available in that study. This prevents studies with many labeled targets from dominating the gradient simply because they have more active labels.
 
