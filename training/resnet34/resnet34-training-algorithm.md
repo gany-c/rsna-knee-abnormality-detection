@@ -84,7 +84,7 @@ For each training example, the loss is calculated as:
 
 In other words, only labeled targets contribute, and the loss is normalized by the total confidence weight available in that study. This prevents studies with many labeled targets from dominating the gradient simply because they have more active labels.
 
-## Gradient accumulation
+### Gradient accumulation
 
 Gradients are accumulated across **four studies** before the optimizer updates the model weights. This effectively creates a larger training batch without needing to load all four studies into GPU memory at once.
 
