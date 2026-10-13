@@ -75,6 +75,21 @@ This is a separate experiment from increasing four to eight triplets. It does no
 
 Larger backbones and large ensembles are lower priority until these experiments identify the current limitation.
 
+### 4.1. Proposed sampling variation: avoid duplicated boundary slices
+
+Shift a triplet inward when its selected center is at the boundary, so it contains three distinct slices whenever the retained stack has at least three real slices. Using one-based slice numbers for a 30-slice series:
+
+| Position | Current triplet | Proposed triplet |
+|---|---|---|
+| First slice | 1, 1, 2 | 1, 2, 3 |
+| Last slice | 29, 30, 30 | 28, 29, 30 |
+
+Interior triplets remain unchanged. For a zero-based center `c` and `n >= 3` real slices, use `start = min(max(c - 1, 0), n - 3)` and select `start, start + 1, start + 2`. The selected boundary position no longer occupies the middle channel. Series with fewer than three real slices still require repetition; never use depth-padding slices.
+
+Keep four triplets per series and the existing center-selection policy, so the image-channel count and computational budget remain unchanged. This is separate from emphasizing middle slices: it changes boundary handling only. Neighbors refer to the retained stack and may not be consecutive acquired slices if preprocessing reduced a long series to 64 slices.
+
+Apply the same boundary rule in training, validation, and inference for a new trained variant. Compare against the existing rule on the same holdouts; do not silently change inputs for the current ensemble. This is a proposed experiment only; no sampling code has been changed.
+
 ## 5. Radiologist review: eight studies labelled — October 13, 2026
 
 **Eight studies were labelled in today’s review, as reported by the user.** The local viewer has **20 studies from the excluded 490** downloaded and grouped under “Excluded training studies.” The saved labels and completion status have not been audited as part of this update.
