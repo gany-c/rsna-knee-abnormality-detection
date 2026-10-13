@@ -92,7 +92,8 @@ The following are observations reported from today's eight-study labelling sessi
 3. **Contusion:** Both sagittal and coronal **fat-suppressed** images are useful.
 4. **Bone fracture:** The coronal plane was emphasized as particularly useful.
 5. **Meniscal tears:** Reviewing the entire sagittal stack is important because different portions of the menisci appear across successive slices.
-6. **Sampling implication:** Consider giving more sampling coverage to the middle slices, particularly in sagittal and coronal series, while preserving coverage throughout the stack so that peripheral findings and meniscal tears are not missed.
+6. **Co-occurence: ACL and MCL - Effusion ** The former is a 50% indication of the latter.
+7. **Sampling implication:** Consider giving more sampling coverage to the middle slices, particularly in sagittal and coronal series, while preserving coverage throughout the stack so that peripheral findings and meniscal tears are not missed.
 
 **Proposed experiment:** compare the current evenly distributed prediction sampling with sampling that allocates more triplets to the middle of coronal and sagittal stacks while retaining some peripheral coverage. Keep the total triplet budget, training data, and validation splits fixed. Define the central region and sampling allocation before the experiment; no exact percentages have been chosen. Use compatible training and inference policies and train a new model rather than silently changing sampling for existing checkpoints.
 
