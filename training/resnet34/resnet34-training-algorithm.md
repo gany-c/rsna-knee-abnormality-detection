@@ -66,10 +66,6 @@ This head uses pooling and a linear classifier, not Transformer attention. All c
 
 ## Loss and optimization
 
-Here’s a plain-language rewrite for a regular software engineer:
-
-## Loss and optimization
-
 For each prediction target, a **label mask** tells the training loop whether we have a usable label for that example. If a target is unknown, it is ignored in the loss calculation—it is never treated as a negative example just because we do not know its value.
 
 Labels have different confidence levels:
