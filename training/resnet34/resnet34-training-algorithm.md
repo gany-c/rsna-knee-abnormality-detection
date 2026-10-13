@@ -72,7 +72,8 @@ Labels have different confidence levels:
 
 - **Verified labels** get full weight: `1.0`.
 - **Community-provided labels** get lower weight: `COMMUNITY_WEIGHT`, defaulting to `0.25`.
-- **Soft labels**—probabilities between 0 and 1 rather than hard 0/1 labels—are kept as floating-point values throughout training.
+
+ The community provided labels are **Soft labels**— i.e. probabilities between 0 and 1 rather than hard 0/1 labels—are kept as floating-point values throughout training.
 
 The model uses **binary cross-entropy with logits** (`BCEWithLogitsLoss`) as its loss function. This loss supports soft probability labels directly, so the labels do not need to be rounded to 0 or 1.
 
@@ -84,7 +85,7 @@ For each training example, the loss is calculated as:
 
 In other words, only labeled targets contribute, and the loss is normalized by the total confidence weight available in that study. This prevents studies with many labeled targets from dominating the gradient simply because they have more active labels.
 
-### Gradient accumulation
+#### Gradient accumulation
 
 Gradients are accumulated across **four studies** before the optimizer updates the model weights. This effectively creates a larger training batch without needing to load all four studies into GPU memory at once.
 
@@ -92,7 +93,7 @@ If the final group has fewer than four studies, its loss is normalized correctly
 
 Each study is used exactly once per epoch, and the order of studies is shuffled every epoch.
 
-## Optimizer and training settings
+#### Optimizer and training settings
 
 The current training configuration is:
 
