@@ -85,3 +85,9 @@ Both initial training runs stopped at our configured **7.5-hour time budget**. A
 - **Oct 5:** started the fresh eight-triplet experiment using the same normalized images. The change was **four → eight triplets per series**, each still containing **three adjacent slices**; it was not three → eight individual slices.
 - **Oct 6:** reviewed the eight-triplet run after nine completed epochs, resumed for epoch 10, and reached early stopping with epoch 7 still best. Its inference scored **0.831**. No renormalization was needed.
 - **Model packages used:** four-triplet `study-mil/4`; eight-triplet `comm-dataset-slice-8/2`. Eight-triplet model V1 and V2 retained the same best epoch-7 weights. Model versions differ from submission versions.
+
+## 7. October 13 — ResNet34 Ensemble Submission Result
+
+| Submission | Version | Configuration | Status | Public score |
+|---|---:|---|---|---:|
+| submit-knee-resnet34-ensemble-0-2 | 3 | 50% member 0 + 50% member 2 probabilities; four triplets per series | Succeeded | **0.851** |
