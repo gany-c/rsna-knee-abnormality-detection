@@ -91,3 +91,22 @@ Both initial training runs stopped at our configured **7.5-hour time budget**. A
 | Submission | Version | Configuration | Status | Public score |
 |---|---:|---|---|---:|
 | submit-knee-resnet34-ensemble-0-2 | 3 | 50% member 0 + 50% member 2 probabilities; four triplets per series | Succeeded | **0.851** |
+
+## 8. October 14–15, 2026 — Radiologist Labelling and Dataset
+
+- **October 14:** Completed the remaining **12 studies** with radiologist **Dr. Amit Yadav**, bringing the total to **20 labelled studies**. Created the [radiologist-verified 20-study dataset](https://www.kaggle.com/datasets/gany24558/rsna-knee-radiologist-verified-20/data).
+- **October 15:** Fixed the dataset after finding that it had not been created correctly.
+
+## 9. October 14–16, 2026 — GPU Quota Interruption
+
+- **October 14:** Ran out of weekly GPU quota after the all-planes-central training/resumption, despite purchasing additional quota through Colab. Patience had been increased to 5 in configuration, but a hard-coded early-stopping check still used 3.
+- **October 15:** Created the all-planes inference notebook, but exhausted quota prevented submission.
+- **October 16:** Still out of quota, with **19 hours remaining until reset** according to the journal. Inference and further training were postponed. This was the reported roughly two-day interruption; exact exhaustion and reset times were not recorded.
+
+## 10. October 17, 2026 — ResNet34 All-Planes-Central Submission Result
+
+| Submission | Version | Configuration | Status | Public score |
+|---|---:|---|---|---:|
+| [submit-knee-resnet34-all-planes-central](https://www.kaggle.com/code/gany24558/submit-knee-resnet34-all-planes-central?scriptVersionId=359216319) | 3 | Single ResNet34; all usable series; four centrally weighted triplets per series; inward-shifted boundary triplets | Succeeded | **0.844** |
+
+**October 17 — Further training:** Continued the all-planes-central model with early-stopping patience increased to 5 and then 7. Training ended at epoch 21 without improving the best validation loss of **0.495103 at epoch 14**. The epoch-14 checkpoint was retained; the continuation produced no improved model.
