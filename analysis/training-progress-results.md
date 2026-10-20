@@ -110,3 +110,16 @@ Both initial training runs stopped at our configured **7.5-hour time budget**. A
 | [submit-knee-resnet34-all-planes-central](https://www.kaggle.com/code/gany24558/submit-knee-resnet34-all-planes-central?scriptVersionId=359216319) | 3 | Single ResNet34; all usable series; four centrally weighted triplets per series; inward-shifted boundary triplets | Succeeded | **0.844** |
 
 **October 17 — Further training:** Continued the all-planes-central model with early-stopping patience increased to 5 and then 7. Training ended at epoch 21 without improving the best validation loss of **0.495103 at epoch 14**. The epoch-14 checkpoint was retained; the continuation produced no improved model.
+
+
+## 11. October 18–20, 2026 — Transferred-Label ResNet34 Experiment
+
+Generated CoAtNet teacher soft labels for all **4,407 studies** and trained the same all-planes-central ResNet34 with corrected weighting: transferred targets have weight **0.25**, official targets **1**, and loss is divided by the number of active labels so pseudo-label weights do not cancel. Training used **4,369 studies**, including **40 official-gold studies**; validation held out **18 official-gold + 20 radiologist-labelled studies**, excluding their pseudo-labels from training.
+
+After the first interactive session's full checkpoint was lost, fine-tuning started from its published epoch-4 weights with fresh optimizer and scheduler state. The selected fine-tune epoch 4 achieved combined validation **BCE 0.496086 / macro AUROC 0.838431**; later training resumed from a saved full checkpoint.
+
+| Date (IST) | Submission | Version | Status | Public score |
+|---|---|---:|---|---:|
+| October 20, 2026 | [submit-knee-resnet34-transferred-labels](https://www.kaggle.com/code/gany24558/submit-knee-resnet34-transferred-labels?scriptVersionId=360274151) | 2 | Succeeded | **0.859** |
+
+This is our highest recorded public score: **+0.015** over all-planes-central (**0.844**) and **+0.008** over the ResNet34 ensemble (**0.851**).

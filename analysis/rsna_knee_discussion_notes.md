@@ -210,3 +210,19 @@ runtime contributes about `0.111`.
 The practical implication is that a much larger or slower model is
 worthwhile only if its improvement in predictive performance compensates
 for its additional runtime.
+
+
+---
+
+## 6. Discussion update — 15 October 2026: metadata and generated labels
+
+| File | Origin | Role in our pipeline |
+|---|---|---|
+| `train_series.csv` | Provided by the competition | Identifies studies and series and provides anatomical plane, fat-suppression, and fluid-sensitivity metadata. Preprocessing carries this information into the processed manifests. |
+| `qwen_training_labels.csv` | Created by our generative-AI label-generation pipeline, not supplied by the competition | Contains accepted condition labels extracted by a Qwen language model from the supplied radiology reports, with masks and confidence weights. These labels helped select the original 3,917-study image subset alongside officially labelled studies. |
+
+The Qwen outputs are **report-derived weak labels**, not additional radiologist-verified ground truth. Official labels are preserved wherever available.
+
+In the current community-label ResNet34 training setup, generated training targets are replaced with community targets from `labels_v1_blend.parquet`, while official labels remain authoritative. The Qwen file therefore still affects which images were included in the original subset, but its predictions are **not the current training targets**.
+
+Retaining acquisition metadata does not mean the current ResNet explicitly consumes plane, FS, or fluid-sensitivity flags as input features. Using these fields for grouped pooling and learned fusion remains a proposed experiment.
