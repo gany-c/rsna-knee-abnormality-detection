@@ -123,3 +123,37 @@ After the first interactive session's full checkpoint was lost, fine-tuning star
 | October 20, 2026 | [submit-knee-resnet34-transferred-labels](https://www.kaggle.com/code/gany24558/submit-knee-resnet34-transferred-labels?scriptVersionId=360274151) | 2 | Succeeded | **0.859** |
 
 This is our highest recorded public score: **+0.015** over all-planes-central (**0.844**) and **+0.008** over the ResNet34 ensemble (**0.851**).
+
+## 12. October 20–22, 2026 — ConvNeXt, Colab Continuation and Inference Runtime
+
+### Training changes
+
+Replaced ResNet34 with **ImageNet-pretrained ConvNeXt-Tiny**, with newly initialized attention/classifier layers; this experiment did not initialize from the transferred-label ResNet student. Retained the transferred-label training strategy and corrected pseudo-label weighting, with **4,369 training studies** and **18 official-gold + 20 radiologist studies** for validation.
+
+Changed fixed four-triplet sampling to **15% of retained real slice depth, bounded to 4–12 adjacent-slice triplets per series**. Configured **70% central sampling within the middle 30% of depth**, subject to the sampler's availability and outer-coverage constraints; the realized central share is not always 70%. Used all usable series and condition-specific attention over **six plane × FS/non-FS groups**, preserving anatomical and sequence distinctions. These changes were made together, so this was not an isolated backbone ablation.
+
+### Training time and move to Colab
+
+Kaggle logs showed ConvNeXt epochs taking roughly **3–3.8 hours**, versus about **50 minutes** for the earlier 3,133-study all-planes ResNet run. The transferred-label ResNet run with the same 4,369-study training cohort took about **73–75 minutes per epoch**. The increase therefore reflects both the heavier model/more sampled triplets and, for the older ResNet comparison, more training studies; it cannot all be attributed to the backbone.
+
+**October 20:** Ganapathy deliberately stopped Kaggle training with approximately **16–17 minutes of GPU quota remaining**, preserving capacity for the short visible-test notebook runs required before submission. This was a useful resource-management decision: it allowed subsequent submission preparation to continue despite almost exhausting the weekly allocation.
+
+Purchased additional **Google Colab compute units** and moved training to a native Colab session because Kaggle's remaining GPU budget was insufficient. The purchase did not replenish the displayed Kaggle allowance; running directly in Colab let us use the purchased compute, including an **A100** session. Moving required dataset downloads and checkpoint transfer, adding setup time. Full checkpoints were verified on Drive after epochs, allowing interrupted sessions to resume rather than restart training.
+
+### Training outcome
+
+The downloaded run reviewed on **October 22** completed through **epoch 24** and early-stopped. The selected model remained **epoch 17**, with validation **BCE 0.493520 / macro AUROC 0.865843**. Its exported weights were uploaded as **central-group-attention model version 3**. The full epoch-24 continuation checkpoint and the selected inference model are different artifacts.
+
+### Why inference became a concern
+
+The previous ResNet submission took approximately **2.5 hours**, as reported by Ganapathy. ConvNeXt inference combines a more expensive image encoder with more sampled triplets across all usable series. Hidden-test inference also reads and preprocesses raw DICOM volumes, unlike training from normalized caches. These are likely runtime contributors; we have not profiled the hidden run to establish their individual costs. Selecting T4 ×2 does not by itself parallelize this single-device inference implementation.
+
+The competition allows **nine hours of notebook execution**. The original inference used an **8.5-hour internal budget** and raised an exception if that budget was reached, without exporting a completed submission. On October 22, original submission **Version 3** eventually displayed **“Notebook Threw Exception”**, at approximately 11 hours of submission age. **The traceback has not yet been inspected, so timeout is suspected, not confirmed.** Submission age is not measured execution time. No ConvNeXt public score was available at this update.
+
+### Lightweight inference contingency
+
+Built a separate **submit-knee-convnext-tiny-central-attention-light.ipynb** to reduce computation and avoid discarding all completed predictions at the internal deadline. It uses the **same Colab-trained epoch-17 model**, with an explicit inference-only sampling change to **6% of retained slice depth, bounded to 2–4 triplets per series**. Resolution, all usable series, central-sampling policy, plane/FS attention and model weights remain unchanged. Full-volume DICOM preprocessing remains, so fewer triplets do not guarantee a proportional speedup; accuracy under the new sampling has not been validated.
+
+After model checks, the lightweight version writes a complete CSV initialized with **0.5 probabilities**, replacing rows and saving atomically after each completed study. At its **8.5-hour internal budget**, it exits cleanly with **partial_timeout**, retaining fallbacks for unfinished studies and recording coverage separately. The nominal 30-minute margin must cover earlier setup and finalization; deadline checks occur between series and cannot interrupt a long decoder call. A Kaggle hard timeout or unrelated exception can still fail the submission despite a saved CSV.
+
+Local syntax checks and simulated completion/timeout tests passed. **Lightweight submission Version 2 was still running** in the latest October 22 screenshot. The successful transferred-label ResNet score of **0.859** remains the best recorded result while these outcomes are pending.
