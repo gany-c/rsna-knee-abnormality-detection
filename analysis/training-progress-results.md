@@ -131,6 +131,7 @@ This is our highest recorded public score: **+0.015** over all-planes-central (*
    - **Sampling:** Fixed four triplets → **15% of retained slice depth, bounded to 4–12 triplets per series**.
    - **Central emphasis:** Targeted 70% of samples within the middle 30% of depth, subject to available slices and outer-coverage constraints.
    - **Fusion:** Condition-specific attention over six **plane × FS/non-FS groups**, using all usable series.
+     - Inspired by the [CoPAS paper: Learning co-plane attention across MRI sequences for diagnosing twelve types of knee abnormalities](https://www.nature.com/articles/s41467-024-51888-4) (Nature Communications, 2024). Our group-attention implementation draws on its plane/sequence distinctions; it is not a reproduction of CoPAS.
    - **Labels/split unchanged:** Transferred labels with corrected 0.25 weighting; **4,369 training studies**, **18 official-gold + 20 radiologist validation studies**.
    - Multiple changes were combined; this was **not an isolated backbone ablation**.
 
@@ -155,7 +156,8 @@ This is our highest recorded public score: **+0.015** over all-planes-central (*
    - Submission inference also preprocesses **raw DICOM volumes**, unlike training from normalized caches. Hidden-run bottlenecks were not profiled.
    - Selecting **T4 ×2** does not automatically parallelize our single-device inference code.
    - Competition limit: **9 hours**. Original code raised an exception at its **8.5-hour internal budget**, without exporting a completed CSV.
-   - Original submission **Version 3 failed with “Notebook Threw Exception.”** Timeout is suspected, **not confirmed without the traceback**. Its roughly 11-hour submission age was not measured execution time.
+   - Original submission **Version 3 failed with “Notebook Threw Exception.”** The exact exception remains unconfirmed without the traceback.
+     - **Timing distinction:** Ganapathy reported approximately **10.5 hours on the UI before failure**, versus **9.6 hours in the submission system’s internal check**. UI elapsed time and internal execution time are different measures; neither should be confused with our configured 8.5-hour budget.
 
 6. **Lightweight inference contingency**
    - Notebook: **submit-knee-convnext-tiny-central-attention-light.ipynb**.
