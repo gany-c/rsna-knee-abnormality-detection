@@ -170,6 +170,10 @@ Compare epsilon 0.05 with epsilon 0.0 (no smoothing), holding all other settings
 
 Added October 20, 2026. MRNet, MPFuseNet, and ELNet are earlier knee MRI deep-learning systems used as comparison baselines in the CoPAS Nature paper. The suffixes 24, 26, and 27 in that paper are citation numbers, not model versions. The authors adapted the systems to their own 12-condition dataset.
 
+MRNet (Bien et al., 2018) is Stanford's knee MRI model and dataset for three tasks: general abnormality, ACL tears, and meniscal tears. Its 1,370 exams comprise 1,130 training, 120 tuning, and 120 hidden-test exams; labels were extracted from clinical reports.
+
+Dataset access is available through [Stanford AIMI](https://aimi.stanford.edu/datasets/mrnet-knee-mris) and the [MRNet page](https://stanfordmlgroup.github.io/competitions/mrnet/), subject to the download portal's access terms. Public community implementations are available on GitHub, including [MRNet-Competition](https://github.com/yashbhalgat/MRNet-Competition), linked by Stanford; these should be distinguished from the original authors' code.
+
 ResNet34 is our image encoder; MRNet and MPFuseNet describe broader systems for processing slices and combining views. Their fusion ideas can be explored while retaining a ResNet34 encoder.
 
 | Approach | Main idea | Comparison with our current baseline |
@@ -190,3 +194,29 @@ Sources:
 - [MRNet: Deep-learning-assisted diagnosis for knee magnetic resonance imaging](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1002699)
 - [MPFuseNet: Optimising Knee Injury Detection with Spatial Attention and Validating Localisation Ability](https://arxiv.org/abs/2108.08136)
 - [ELNet: Knee Injury Detection using MRI with Efficiently-Layered Network](https://arxiv.org/abs/2005.02706)
+
+## 13. CAM visualizations
+
+- **CAM (Class Activation Mapping):** Produces a heatmap of image regions contributing to a class prediction.
+- **EigenCAM:** Uses principal components of internal feature maps to highlight prominent regions, without class-specific gradients; its heatmap is not class-specific.
+- **Grad-CAM++:** Uses gradients to produce a class-specific heatmap of regions influencing a prediction.
+
+**We currently use none of these techniques.** Our plane/FS attention weights groups of series, not individual image regions. These heatmaps could support radiologist review, but are not verified lesion outlines.
+
+## 14. Google Colab versus Vertex AI
+
+Added October 21, 2026.
+
+**Colab** is a hosted notebook service for interactive experiments. **Vertex AI** is a broader Google Cloud platform; its Workbench notebooks run on configurable cloud VMs, while managed training jobs run independently of the notebook or browser.
+
+| Aspect | Google Colab | Vertex AI |
+| --- | --- | --- |
+| Setup | Minimal setup; choose a runtime and run cells. | Requires a cloud project, billing, permissions, and storage configuration. |
+| Compute | GPU availability and session limits apply, including paid plans. | More control over hardware, subject to cloud quotas and availability. |
+| Storage | Runtime files are temporary; we save checkpoints to Drive. | Persistent disks for Workbench and Cloud Storage for durable training artifacts. |
+| Billing | Free tier or paid compute units. | Separate Google Cloud usage charges. |
+| Unattended training | Save checkpoints to recover from session interruptions. | Managed training jobs continue independently of the browser; notebook execution depends on its VM and shutdown settings. |
+
+The notebooks used at Walmart in 2022–2023 were likely Vertex AI Workbench or its predecessor, AI Platform Notebooks; the exact service is unconfirmed. For this competition, finish the current Colab run; consider managed cloud training for future long runs. Changing platforms alone does not improve model accuracy.
+
+Sources: [Colab FAQ](https://research.google.com/colaboratory/faq.html), [Google Cloud notebook options](https://docs.cloud.google.com/vertex-ai/docs/workbench/notebook-solution), [Managed training overview](https://cloud.google.com/vertex-ai/docs/training/overview).
