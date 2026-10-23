@@ -16,6 +16,8 @@ We used an LLM to generate labels from the radiology reports and combined them w
 
 Replaced our self-generated labels with community soft targets, smoothed using `p * 0.9 + 0.05`; official competition labels were preserved.
 
+**Label source:** [nartaa/rsna-knee-hpo-assets](https://www.kaggle.com/datasets/nartaa/rsna-knee-hpo-assets), specifically `labels_v1_blend.parquet`.
+
 **Note:** Although community and competition labels now covered all **4,407 studies**, we still used only the **3,917 original studies**, because those were the images we had already normalized.
 
 **Approximate submission date:** September 28, 2026 (8d ago from October 6).
@@ -114,7 +116,7 @@ Both initial training runs stopped at our configured **7.5-hour time budget**. A
 
 ## 11. October 18–20, 2026 — Transferred-Label ResNet34 Experiment
 
-Generated CoAtNet teacher soft labels for all **4,407 studies** and trained the same all-planes-central ResNet34 with corrected weighting: transferred targets have weight **0.25**, official targets **1**, and loss is divided by the number of active labels so pseudo-label weights do not cancel. Training used **4,369 studies**, including **40 official-gold studies**; validation held out **18 official-gold + 20 radiologist-labelled studies**, excluding their pseudo-labels from training.
+Generated CoAtNet teacher soft labels using [nartaa/rsna-knee-publication-swa-weights-20261007, version 1](https://www.kaggle.com/datasets/nartaa/rsna-knee-publication-swa-weights-20261007/versions/1) (teacher model weights distributed as a dataset) for all **4,407 studies** and trained the same all-planes-central ResNet34 with corrected weighting: transferred targets have weight **0.25**, official targets **1**, and loss is divided by the number of active labels so pseudo-label weights do not cancel. Training used **4,369 studies**, including **40 official-gold studies**; validation held out **18 official-gold + 20 radiologist-labelled studies**, excluding their pseudo-labels from training.
 
 After the first interactive session's full checkpoint was lost, fine-tuning started from its published epoch-4 weights with fresh optimizer and scheduler state. The selected fine-tune epoch 4 achieved combined validation **BCE 0.496086 / macro AUROC 0.838431**; later training resumed from a saved full checkpoint.
 
