@@ -169,3 +169,14 @@ This is our highest recorded public score: **+0.015** over all-planes-central (*
    - Syntax and simulated completion/timeout tests passed. **Lightweight Version 2 was still running at this update.**
 
 **Status as of October 22:** No ConvNeXt public score yet. Transferred-label ResNet remains our best recorded submission at **0.859**.
+
+## 13. October 23, 2026 — Competition Complete
+
+- **The competition is over.** The submissions page reported two selected submissions for final evaluation.
+- **Lightweight ConvNeXt:** [Version 2](https://www.kaggle.com/code/gany24558/submit-knee-convnext-tiny-central-attention-light?scriptVersionId=361120786) **succeeded**, with a displayed score of **0.817**.
+  - The pasted results did not identify whether this was the **public or private score**; do not compare it directly with a different leaderboard split.
+  - Coverage logs have not been reviewed. Success does not establish whether all studies received model predictions or some retained timeout fallbacks.
+- **Original ConvNeXt:** Versions **2 and 3** failed with **“Notebook Threw Exception”** and produced no score.
+- **Best recorded public score:** Transferred-label ResNet34 **0.859**. If ConvNeXt's 0.817 is public, it is **0.042 lower**.
+  - The result does not isolate backbone quality: lightweight inference changed slice sampling, and fallback coverage remains unconfirmed.
+- **Final private score and leaderboard rank:** Not yet recorded in this document.
